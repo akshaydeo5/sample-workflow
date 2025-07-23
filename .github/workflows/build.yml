@@ -1,0 +1,92 @@
+name: Deployment workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner_name:
+        description: 'Runner Name'
+        required: true
+        default: ubuntu-latest
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - closed
+  schedule:
+    - cron: 0 * * * *
+  release:
+    types:
+      - created
+      - updated
+
+env:
+  RUNNER: ${{inputs.runner_name}}
+
+jobs:
+  build:
+    runs-on: $RUNNER
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build code
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build
+
+  test:
+    runs-on: $RUNNER
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm run test
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results
+
+  deploy:
+    runs-on: $RUNNER
+    needs: [build, test]
+    env:
+      DEPLOYMENT_TOKEN: ${{ secrets.DEPLOYMENT_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy code
+        run: npm run deploy
+
+      - name: Upload deployment logs
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-logs
+          path: deployment-logs
+
+  cleanup:
+    runs-on: $RUNNER
+    needs: [build, test, deploy]
+    steps:
+      - name: Cleanup artifacts
+        run: |
+          rm -rf build-artifact
+          rm -rf test-results
+          rm -rf deployment-logs
