@@ -23,7 +23,7 @@ on:
       - updated
 
 env:
-  RUNNER: ${{inputs.runner_name}}
+  RUNNER: ubuntu-latest
 
 jobs:
   build:
