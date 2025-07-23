@@ -23,7 +23,7 @@ on:
       - updated
 
 env:
-  RUNNER: ubuntu-latest
+  RUNNER: Linux
 
 jobs:
   build:
