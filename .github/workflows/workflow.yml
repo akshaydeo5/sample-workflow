@@ -17,8 +17,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
  
-      - name: Set pipeline id (name-runid-timestamp)
-        run: echo "PIPELINE_ID=${PIPELINE_NAME// /-}-${GITHUB_RUN_ID}-$(date -u +%Y%m%dT%H%M%SZ)" >> "$GITHUB_ENV"
+      - name: Set pipeline id and start time
+        run: |
+          start=$(date -u +%Y-%m-%dT%H:%M:%S)
+          echo "START_TIME=$start" >> "$GITHUB_ENV"
+          echo "PIPELINE_ID=${PIPELINE_NAME// /-}-${GITHUB_RUN_ID}-$(date -u -d "$start" +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
  
       - name: Send START event
         run: python scripts/adapter.py start
