@@ -113,11 +113,6 @@ def main():
     print(f"Sending {args.event} event to {args.url}:")
     print(json.dumps(event, indent=2))
  
-    # In GitHub Actions, persist start_time so the end event can reuse it.
-    if args.event == "start" and os.environ.get("GITHUB_ENV"):
-        with open(os.environ["GITHUB_ENV"], "a") as f:
-            f.write(f"START_TIME={event['data']['start_time']}\n")
- 
     if not args.dry_run:
         send(event, args.url, args.token)
  
