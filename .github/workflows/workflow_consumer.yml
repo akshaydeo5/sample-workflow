@@ -26,10 +26,10 @@ on:
     branches: [main]
 
 env:
-  API_URL: ${{ secrets.CONSUMER_API_URL != '' && format('{0}/api/v1/events/build', secrets.CONSUMER_API_URL) || 'http://localhost:8004/api/v1/events/build' }}
+  API_URL: 'http://localhost:8004/api/v1/events/build'
   PIPELINE_NAME: ${{ github.workflow }}
-  RELEASE_ID: ${{ inputs.release_id || vars.RELEASE_ID }}
-  ECM_CODE: ${{ inputs.ecm_code || vars.ECM_CODE }}
+  RELEASE_ID: "R26.01"
+  ECM_CODE: "DISPLAY"
 
 jobs:
   pipeline:
