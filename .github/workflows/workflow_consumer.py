@@ -1,0 +1,51 @@
+# Sends START -> KPI -> END build events to the local consumer service via scripts/adapter.py.
+# Place in .github/workflows/ of your repo.
+#
+# GitHub-hosted runners cannot reach "localhost" on your PC, so pick ONE of:
+#   A) Self-hosted runner on your PC (default, recommended): the job runs on your machine
+#      and calls http://localhost:8004 directly. Nothing is exposed to the internet.
+#   B) Tunnel: expose port 8004 (e.g. `devtunnel host -p 8004 --allow-anonymous`,
+#      `cloudflared tunnel --url http://localhost:8004` or `ngrok http 8004`), then set
+#      repo variable RUNNER_LABEL=ubuntu-latest and secret CONSUMER_API_URL=<tunnel url>.
+#
+# Repo variables (Settings -> Secrets and variables -> Actions -> Variables):
+#   RELEASE_ID, ECM_CODE   release and ECM the build belongs to (must already be loaded)
+#   RUNNER_LABEL           optional, defaults to self-hosted
+name: KPI Event Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: Release id (overrides vars.RELEASE_ID)
+        required: false
+      ecm_code:
+        description: ECM code (overrides vars.ECM_CODE)
+        required: false
+  push:
+    branches: [main]
+
+env:
+  API_URL: ${{ secrets.CONSUMER_API_URL != '' && format('{0}/api/v1/events/build', secrets.CONSUMER_API_URL) || 'http://localhost:8004/api/v1/events/build' }}
+  PIPELINE_NAME: ${{ github.workflow }}
+  RELEASE_ID: ${{ inputs.release_id || vars.RELEASE_ID }}
+  ECM_CODE: ${{ inputs.ecm_code || vars.ECM_CODE }}
+
+jobs:
+  pipeline:
+    runs-on: ${{ vars.RUNNER_LABEL || 'self-hosted' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send START event
+        run: python scripts/adapter.py start
+
+      # ... your real build/test steps go here ...
+
+      - name: Send KPI event
+        # Replace with real values from your quality/test steps
+        run: python scripts/adapter.py kpi --kpi lines_of_code=12000 --kpi violations=3 --kpi duplication_percent=1.5 --kpi complexity=4.2 --kpi unit_test_count=120 --kpi coverage_percent=87.5
+
+      - name: Send END event
+        if: always()
+        run: python scripts/adapter.py end --status "${{ job.status }}"
