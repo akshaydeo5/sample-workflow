@@ -11,7 +11,7 @@
 # Repo variables (Settings -> Secrets and variables -> Actions -> Variables):
 #   RELEASE_ID, ECM_CODE   release and ECM the build belongs to (must already be loaded)
 #   RUNNER_LABEL           optional, defaults to self-hosted
-name: KPI Event Pipeline
+name: KPI Event Pipeline - Consumer
 
 on:
   workflow_dispatch:
