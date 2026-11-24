@@ -1,4 +1,4 @@
-# Sends START -> KPI -> END build events to the local consumer service via scripts/adapter.py.
+# Sends START -> KPI -> END build events to the local consumer service via scripts/adapter_consumer.py.
 # Place in .github/workflows/ of your repo.
 #
 # GitHub-hosted runners cannot reach "localhost" on your PC, so pick ONE of:
@@ -38,14 +38,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Send START event
-        run: python scripts/adapter.py start
+        run: python scripts/adapter_consumer.py start
 
       # ... your real build/test steps go here ...
 
       - name: Send KPI event
         # Replace with real values from your quality/test steps
-        run: python scripts/adapter.py kpi --kpi lines_of_code=12000 --kpi violations=3 --kpi duplication_percent=1.5 --kpi complexity=4.2 --kpi unit_test_count=120 --kpi coverage_percent=87.5
+        run: python scripts/adapter_consumer.py kpi --kpi lines_of_code=12000 --kpi violations=3 --kpi duplication_percent=1.5 --kpi complexity=4.2 --kpi unit_test_count=120 --kpi coverage_percent=87.5
 
       - name: Send END event
         if: always()
-        run: python scripts/adapter.py end --status "${{ job.status }}"
+        run: python scripts/adapter_consumer.py end --status "${{ job.status }}"

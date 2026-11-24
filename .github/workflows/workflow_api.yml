@@ -1,5 +1,5 @@
-# Sends START -> KPI -> END pipeline events as flat JSON via scripts/adapter.py.
-# Events go to the adapter's default public API (https://httpbin.org/post).
+# Sends START -> KPI -> END pipeline events as flat JSON via scripts/adapter_api.py.
+# Events go to the adapter_api's default public API (https://httpbin.org/post).
 # Place in .github/workflows/ of your repo.
 name: KPI Event Pipeline - API
  
@@ -22,14 +22,14 @@ jobs:
           echo "PIPELINE_ID=${PIPELINE_NAME// /-}-${GITHUB_RUN_ID}-$(date -u -d "$start" +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
  
       - name: Send START event
-        run: python scripts/adapter.py start
+        run: python scripts/adapter_api.py start
  
       # ... your real build/test steps go here ...
  
       - name: Send KPI event
         run: |
           # Replace with real KPI values
-          python scripts/adapter.py kpi \
+          python scripts/adapter_api.py kpi \
             --kpi build_duration_sec=42 \
             --kpi tests_total=120 \
             --kpi tests_passed=118 \
@@ -37,4 +37,4 @@ jobs:
  
       - name: Send END event
         if: always()
-        run: python scripts/adapter.py end --status "${{ job.status }}"
+        run: python scripts/adapter_api.py end --status "${{ job.status }}"
