@@ -1,0 +1,41 @@
+﻿# Sends START -> KPI -> END pipeline events to a consumer API via scripts/adapter.py.
+# Place in .github/workflows/ of your repo.
+#
+# Required configuration (repo Settings > Secrets and variables > Actions):
+#   vars.CONSUMER_URL       e.g. https://my-consumer.example.com/events
+#   secrets.CONSUMER_TOKEN  bearer token expected by the consumer
+name: KPI Event Pipeline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+env:
+  CONSUMER_URL: ${{ vars.CONSUMER_URL }}
+  CONSUMER_TOKEN: ${{ secrets.CONSUMER_TOKEN }}
+  PIPELINE_ID: ${{ github.repository }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send START event
+        run: python scripts/adapter.py start
+
+      # ... your real build/test steps go here ...
+
+      - name: Send KPI event
+        run: |
+          # Replace with real KPI values
+          python scripts/adapter.py kpi \
+            --kpi build_duration_sec=42 \
+            --kpi tests_total=120 \
+            --kpi tests_passed=118 \
+            --kpi code_coverage_pct=87.5
+
+      - name: Send END event
+        if: always()
+        run: python scripts/adapter.py end --status "${{ job.status }}"
