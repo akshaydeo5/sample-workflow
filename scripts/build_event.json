@@ -1,0 +1,96 @@
+{
+  "buildId": "BLD-1042",
+  "pipelineId": "IMPLEMENT_BUILD",
+  "pipelineName": "Implement Build",
+  "releaseId": "R26.01",
+  "machine": {
+    "machineCode": "TTT",
+    "machineName": "TTT"
+  },
+  "machineType": {
+    "typeCode": "MTTT",
+    "typeName": "MTTT"
+  },
+  "variant": {
+    "variantCode": "D4",
+    "variantName": "D4"
+  },
+  "ecm": {
+    "ecmCode": "IMPLEMENT",
+    "ecmName": "Implement",
+    "domain": "control",
+    "ecmType": "RTOS"
+  },
+  "status": "failed",
+  "startTime": "2026-11-17T09:00:00Z",
+  "endTime": "2026-11-17T09:52:05Z",
+  "durationSeconds": 3125,
+  "jobs": [
+    {
+      "jobName": "Checkout Source",
+      "order": 1,
+      "status": "passed",
+      "startTime": "2026-11-17T09:00:00Z",
+      "endTime": "2026-11-17T09:01:30Z",
+      "durationSeconds": 90
+    },
+    {
+      "jobName": "Compile",
+      "order": 2,
+      "status": "passed",
+      "startTime": "2026-11-17T09:01:30Z",
+      "endTime": "2026-11-17T09:24:10Z",
+      "durationSeconds": 1360
+    },
+    {
+      "jobName": "Quality Gate",
+      "order": 3,
+      "status": "passed",
+      "startTime": "2026-11-17T09:24:10Z",
+      "endTime": "2026-11-17T09:31:40Z",
+      "durationSeconds": 450
+    },
+    {
+      "jobName": "Unit Test",
+      "order": 4,
+      "status": "failed",
+      "startTime": "2026-11-17T09:31:40Z",
+      "endTime": "2026-11-17T09:52:05Z",
+      "durationSeconds": 1225
+    },
+    {
+      "jobName": "Package",
+      "order": 5,
+      "status": "canceled",
+      "startTime": null,
+      "endTime": null,
+      "durationSeconds": null
+    }
+  ],
+  "failure": {
+    "failedStep": "Unit Test",
+    "reason": "Unit test timeout while validating blade lift command response"
+  },
+  "logs": [
+    {
+      "timestamp": "2026-11-17T09:12:44Z",
+      "level": "warning",
+      "stage": "Compile",
+      "message": "Fallback value used for implement hydraulic pressure map."
+    },
+    {
+      "timestamp": "2026-11-17T09:51:58Z",
+      "level": "error",
+      "stage": "Unit Test",
+      "message": "Blade lift command response test exceeded 90 second execution window."
+    }
+  ],
+  "codeQuality": {
+    "linesOfCode": 45230,
+    "violations": 12,
+    "duplicationPercent": 3.2,
+    "complexity": 4.5,
+    "unitTestCount": 234,
+    "coveragePercent": 87.5
+  }
+}

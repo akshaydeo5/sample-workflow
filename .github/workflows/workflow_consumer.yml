@@ -1,35 +1,20 @@
-# Sends START -> KPI -> END build events to the local consumer service via scripts/adapter_consumer.py.
-# Place in .github/workflows/ of your repo.
-#
-# GitHub-hosted runners cannot reach "localhost" on your PC, so pick ONE of:
-#   A) Self-hosted runner on your PC (default, recommended): the job runs on your machine
-#      and calls http://localhost:8004 directly. Nothing is exposed to the internet.
-#   B) Tunnel: expose port 8004 (e.g. `devtunnel host -p 8004 --allow-anonymous`,
-#      `cloudflared tunnel --url http://localhost:8004` or `ngrok http 8004`), then set
-#      repo variable RUNNER_LABEL=ubuntu-latest and secret CONSUMER_API_URL=<tunnel url>.
-#
-# Repo variables (Settings -> Secrets and variables -> Actions -> Variables):
-#   RELEASE_ID, ECM_CODE   release and ECM the build belongs to (must already be loaded)
-#   RUNNER_LABEL           optional, defaults to self-hosted
+# Sends a build event JSON to the consumer service via scripts/adapter_consumer.py.
+# The runner must be able to reach API_URL (use a self-hosted runner or a tunnel for localhost).
 name: KPI Event Pipeline - Consumer
 
 on:
   workflow_dispatch:
     inputs:
-      release_id:
-        description: Release id (overrides vars.RELEASE_ID)
+      json_file:
+        description: Path to the build event JSON
         required: false
-      ecm_code:
-        description: ECM code (overrides vars.ECM_CODE)
-        required: false
+        default: scripts/build_event.json
   push:
     branches: [main]
 
 env:
   API_URL: 'http://localhost:8004/api/v1/events/build'
-  PIPELINE_NAME: ${{ github.workflow }}
-  RELEASE_ID: "R26.01"
-  ECM_CODE: "DISPLAY"
+  JSON_FILE: ${{ inputs.json_file || 'scripts/build_event.json' }}
 
 jobs:
   pipeline:
@@ -37,15 +22,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Send START event
-        run: python scripts/adapter_consumer.py start
-
-      # ... your real build/test steps go here ...
-
       - name: Send KPI event
-        # Replace with real values from your quality/test steps
-        run: python scripts/adapter_consumer.py kpi --kpi lines_of_code=12000 --kpi violations=3 --kpi duplication_percent=1.5 --kpi complexity=4.2 --kpi unit_test_count=120 --kpi coverage_percent=87.5
-
-      - name: Send END event
-        if: always()
-        run: python scripts/adapter_consumer.py end --status "${{ job.status }}"
+        run: python scripts/adapter_consumer.py "$JSON_FILE"
