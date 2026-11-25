@@ -17,7 +17,7 @@ env:
   JSON_FILE: ${{ inputs.json_file || 'scripts/build_event.json' }}
 
 jobs:
-  pipeline:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
