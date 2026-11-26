@@ -1,40 +1,28 @@
-# Sends START -> KPI -> END pipeline events as flat JSON via scripts/adapter_api.py.
-# Events go to the adapter_api's default public API (https://httpbin.org/post).
-# Place in .github/workflows/ of your repo.
-name: KPI Event Pipeline - API
- 
+# Sends a build event JSON to the DummyJSON posts API (https://dummyjson.com/docs/posts)
+# via scripts/adapter_consumer.py. The event is posted as JSON nested under the post "body".
+name: KPI Event Pipeline - Consumer
+
 on:
   workflow_dispatch:
- 
+    inputs:
+      json_file:
+        description: Path to the build event JSON
+        required: false
+        default: scripts/build_event.json
+  push:
+    branches: [main]
+
 env:
-  PIPELINE_NAME: ${{ github.workflow }}
- 
+  API_URL: 'https://dummyjson.com/posts/add'
+  API_USER_ID: '1'
+  JSON_FILE: ${{ inputs.json_file || 'scripts/build_event.json' }}
+
 jobs:
-  build:
+  pipeline:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
- 
-      - name: Set pipeline id and start time
-        run: |
-          start=$(date -u +%Y-%m-%dT%H:%M:%S)
-          echo "START_TIME=$start" >> "$GITHUB_ENV"
-          echo "PIPELINE_ID=${PIPELINE_NAME// /-}-${GITHUB_RUN_ID}-$(date -u -d "$start" +%Y%m%d%H%M%S)" >> "$GITHUB_ENV"
- 
-      - name: Send START event
-        run: python scripts/adapter_api.py start
- 
-      # ... your real build/test steps go here ...
- 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Send KPI event
-        run: |
-          # Replace with real KPI values
-          python scripts/adapter_api.py kpi \
-            --kpi build_duration_sec=42 \
-            --kpi tests_total=120 \
-            --kpi tests_passed=118 \
-            --kpi code_coverage_pct=87.5
- 
-      - name: Send END event
-        if: always()
-        run: python scripts/adapter_api.py end --status "${{ job.status }}"
+        run: python scripts/adapter_consumer.py "$JSON_FILE"

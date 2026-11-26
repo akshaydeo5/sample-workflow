@@ -1,93 +1,82 @@
-"""Pipeline event adapter: builds start/end/kpi events and POSTs them as flat JSON to an API.
- 
+"""Sends a build event JSON file to the DummyJSON posts API (https://dummyjson.com/docs/posts).
+
+DummyJSON's "add post" endpoint requires `title` and `userId` and drops unknown top-level
+fields, so the build event is sent as a JSON object nested under `body`.
+
 Usage:
-  python adapter.py start --pipeline-name NAME --pipeline-id ID [--start-time TIME]
-  python adapter.py end   --pipeline-name NAME --pipeline-id ID --start-time TIME --status success
-  python adapter.py kpi   --pipeline-name NAME --pipeline-id ID --kpi tests_total=120 --kpi coverage_pct=87.5
- 
-Defaults come from env vars: API_URL, PIPELINE_NAME, PIPELINE_ID, START_TIME.
-Times are UTC in the format YYYY-MM-DDTHH:MM:SS.
+  python adapter_consumer.py build_event.json
+  python adapter_consumer.py build_event.json --url https://dummyjson.com/posts/add
 """
 import argparse
 import json
 import os
+import urllib.error
 import urllib.request
-from datetime import datetime, timezone
- 
-DEFAULT_URL = "https://httpbin.org/post"
- 
- 
-def now():
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
- 
- 
-def parse_kpi(text):
-    name, sep, value = text.partition("=")
-    try:
-        if not sep or not name:
-            raise ValueError
-        return name, float(value)
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"KPI must be name=<number>, got '{text}'")
- 
- 
-def build_event(args):
-    event = {
-        "event_type": args.event,
-        "timestamp": now(),
-        "pipeline_name": args.pipeline_name,
-        "pipeline_id": args.pipeline_id,
+
+DEFAULT_URL = "https://dummyjson.com/posts/add"
+DEFAULT_USER_ID = 1
+
+
+def parse_args():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("json_file", help="path to the build event JSON")
+    p.add_argument("--url", default=os.environ.get("API_URL") or DEFAULT_URL)
+    p.add_argument("--user-id", type=int, default=int(os.environ.get("API_USER_ID") or DEFAULT_USER_ID))
+    return p.parse_args()
+
+
+def build_post(event, user_id):
+    """Wraps the build event in the post shape DummyJSON expects."""
+    return {
+        "title": f"Build event {event.get('buildId', 'unknown')}",
+        "userId": user_id,
+        "tags": ["build-event", str(event.get("status", "unknown"))],
+        "body": event,
     }
-    if args.event == "start":
-        event["start_time"] = args.start_time or event["timestamp"]
-    elif args.event == "end":
-        event["start_time"] = args.start_time
-        event["end_time"] = event["timestamp"]
-        event["status"] = args.status
-    else:
-        for name, value in args.kpi:
-            if name in event:
-                raise SystemExit(f"KPI name '{name}' clashes with an event field")
-            event[name] = value
-    return event
- 
- 
-def send(event, url):
+
+
+def load_payload(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise SystemExit(f"File not found: {path}")
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON in {path}: {exc}")
+
+
+def send_payload(payload, url):
     req = urllib.request.Request(
         url,
-        data=json.dumps(event).encode(),
-        headers={"Content-Type": "application/json", "User-Agent": "pipeline-adapter"},
+        data=json.dumps(payload).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "kpi-adapter-consumer/1.0",
+        },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        print(f"API replied {resp.status}")
- 
- 
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            text = resp.read().decode(errors="replace")
+            print(f"API replied {resp.status}: {text}")
+            return json.loads(text) if text else {}
+    except urllib.error.HTTPError as exc:
+        raise SystemExit(f"API replied {exc.code}: {exc.read().decode(errors='replace')}")
+    except urllib.error.URLError as exc:
+        raise SystemExit(f"Could not reach {url}: {exc.reason}")
+
+
 def main():
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("event", choices=["start", "end", "kpi"])
-    p.add_argument("--pipeline-name", default=os.environ.get("PIPELINE_NAME"))
-    p.add_argument("--pipeline-id", default=os.environ.get("PIPELINE_ID"))
-    p.add_argument("--start-time", default=os.environ.get("START_TIME"))
-    p.add_argument("--status", help="pipeline status (required for end)")
-    p.add_argument("--kpi", type=parse_kpi, action="append", default=[], help="name=value, repeatable")
-    p.add_argument("--url", default=os.environ.get("API_URL") or DEFAULT_URL)
-    p.add_argument("--dry-run", action="store_true", help="print the event without sending")
-    args = p.parse_args()
- 
-    if not args.pipeline_name or not args.pipeline_id:
-        p.error("--pipeline-name and --pipeline-id (or PIPELINE_NAME/PIPELINE_ID env) are required")
-    if args.event == "end" and not (args.status and args.start_time):
-        p.error("--status and --start-time are required for end events")
-    if args.event == "kpi" and not args.kpi:
-        p.error("at least one --kpi is required for kpi events")
- 
-    event = build_event(args)
-    print(json.dumps(event, indent=2))
-    if not args.dry_run:
-        send(event, args.url)
- 
- 
+    args = parse_args()
+    event = load_payload(args.json_file)
+    print(f"Sending build {event.get('buildId')} to {args.url}")
+    reply = send_payload(build_post(event, args.user_id), args.url)
+    echoed = reply.get("body") if isinstance(reply, dict) else None
+    if not isinstance(echoed, dict) or echoed.get("buildId") != event.get("buildId"):
+        raise SystemExit("API response did not echo the build event back")
+    print(f"Created post id {reply.get('id')} for build {echoed['buildId']}")
+
+
 if __name__ == "__main__":
     main()
- 
