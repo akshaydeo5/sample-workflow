@@ -1,7 +1,7 @@
 # Sends START -> KPI -> END pipeline events as flat JSON via scripts/adapter_api.py.
 # Events go to the adapter_api's default public API (https://httpbin.org/post).
 # Place in .github/workflows/ of your repo.
-name: KPI Event Pipeline - API
+name: KPI_Event_Pipeline-API
  
 on:
   workflow_dispatch:
