@@ -1,6 +1,6 @@
 # Sends a build event JSON to the DummyJSON posts API (https://dummyjson.com/docs/posts)
 # via scripts/adapter_consumer.py. The event is posted as JSON nested under the post "body".
-name: KPI Event Pipeline - Consumer
+name: KPI Event Pipeline - API
 
 on:
   workflow_dispatch:
